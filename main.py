@@ -54,7 +54,7 @@ class SkyMonitorApp:
     def refresh_devices(self):
         """刷新连接的安卓设备列表"""
         # 在日志中显示正在刷新的提示信息
-        self.ui.log_message("正在刷新设备列表...")
+        self.ui.log_message("正在刷新设备列表...", "info")
         
         # 通过ADB管理器获取当前连接的所有设备
         devices = self.adb_manager.get_devices()
@@ -63,7 +63,7 @@ class SkyMonitorApp:
         self.ui.update_device_list(devices)
         
         # 在日志中显示发现的设备数量
-        self.ui.log_message(f"发现 {len(devices)} 个设备")
+        self.ui.log_message(f"发现 {len(devices)} 个设备", "success")
     
     def start_monitoring(self):
         """开始截图监控功能"""
@@ -71,7 +71,7 @@ class SkyMonitorApp:
         selected_device = self.ui.selected_device.get()
         if not selected_device:
             # 如果没有选择设备，提示用户并返回
-            self.ui.log_message("请先选择设备")
+            self.ui.log_message("请先选择设备", "warning")
             return
         
         # 设置运行状态为True
@@ -84,7 +84,7 @@ class SkyMonitorApp:
         self.ui.update_status("截图中")
         
         # 在日志中记录开始监控的信息
-        self.ui.log_message("开始截图监控")
+        self.ui.log_message("开始截图监控", "success")
         
         # 创建并启动监控线程
         # 使用线程避免阻塞主UI界面
@@ -104,7 +104,7 @@ class SkyMonitorApp:
         self.ui.update_status("已停止")
         
         # 在日志中记录停止监控的信息
-        self.ui.log_message("停止截图监控")
+        self.ui.log_message("停止截图监控", "info")
     
     def apply_interval(self):
         """应用新的截图间隔设置"""
@@ -120,13 +120,19 @@ class SkyMonitorApp:
         # 持续循环，直到 is_running 标志变为 False
         while self.is_running:
             try:
+                # 记录开始时间
+                start_time = time.time()
+                
                 # 在日志中显示正在截图的提示
-                self.ui.log_message("正在截图...")
+                self.ui.log_message("正在截图...", "processing")
                 
                 # 通过ADB管理器执行截图操作
                 screenshot = self.adb_manager.take_screenshot(device_id)
                 
                 if screenshot is not None:
+                    # 计算截图耗时
+                    elapsed_time = time.time() - start_time
+                    
                     # 截图成功，使用 root.after 在主线程中更新图像显示
                     # 这是因为Tkinter的UI更新必须在主线程中进行
                     self.root.after(0, self.ui.update_images, screenshot)
@@ -138,11 +144,16 @@ class SkyMonitorApp:
                     # 保存截图到本地文件（不添加文本标注，由UI负责显示）
                     self.save_screenshot(screenshot, filename)
                     
-                    # 在日志中显示截图成功的信息
-                    self.ui.log_message(f"截图成功，已保存到 {filename}")
+                    # 在日志中显示截图成功的信息和耗时
+                    self.ui.log_message([
+                        ("截图成功", "success"),
+                        ("，已保存到：", "info"),
+                        (f" {filename}", "path"),
+                        (f" (耗时: {elapsed_time:.2f}秒)", "info")
+                    ])
                 else:
                     # 截图失败，在日志中显示错误信息
-                    self.ui.log_message("截图失败")
+                    self.ui.log_message("截图失败", "error")
                 
                 # 等待指定的截图间隔时间（秒）
                 interval = self.ui.get_interval()
@@ -150,7 +161,7 @@ class SkyMonitorApp:
             
             except Exception as e:
                 # 捕获异常并记录错误信息
-                self.ui.log_message(f"监控错误: {e}")
+                self.ui.log_message(f"监控错误: {e}", "error")
                 # 短暂等待1秒后继续尝试，避免错误循环
                 time.sleep(1)
     

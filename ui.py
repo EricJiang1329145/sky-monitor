@@ -38,15 +38,44 @@ class AppUI:
         self.main_frame = ttk.Frame(root, padding="10")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
+        # 创建左右分栏布局
+        # 左侧：日志（固定宽度）
+        # 右侧：设备管理、控制和屏幕截图（自适应窗口宽度）
+        self.left_frame = ttk.Frame(self.main_frame, width=200)
+        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 5))
+        self.left_frame.pack_propagate(False)
+        
+        self.right_frame = ttk.Frame(self.main_frame)
+        self.right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
         # 创建所有UI组件
         self.create_widgets()
-        
+    
     def create_widgets(self):
         """创建所有UI组件，包括设备选择、控制按钮、图像显示和日志区域"""
-        # ========== 设备选择区域 ==========
+        # ========== 左侧区域：日志 ==========
+        # 创建一个带标题的标签框架，用于显示操作日志
+        log_frame = ttk.LabelFrame(self.left_frame, text="日志", padding="5")
+        log_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建可滚动的文本框，用于显示日志信息
+        # wrap=tk.WORD 表示在单词边界处换行
+        # 设置最小宽度，防止日志框太宽
+        self.log_text = scrolledtext.ScrolledText(log_frame, width=30, height=10, wrap=tk.WORD)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+        # 设置为只读状态，防止用户修改日志内容
+        self.log_text.config(state=tk.DISABLED)
+        
+        # 配置日志颜色标签
+        self._configure_log_tags()
+        
+        # ========== 右侧区域：设备管理 ==========
         # 创建一个带标题的标签框架，用于放置设备相关的控件
-        device_frame = ttk.LabelFrame(self.main_frame, text="设备管理", padding="5")
+        # 使用固定宽度，不随窗口变化
+        device_frame = ttk.LabelFrame(self.right_frame, text="设备管理", padding="5")
         device_frame.pack(fill=tk.X, pady=(0, 10))
+        # 固定宽度，防止随窗口变化
+        device_frame.pack_propagate(False)
         
         # 设备选择标签，显示"设备选择："文字
         ttk.Label(device_frame, text="设备选择：").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
@@ -62,8 +91,11 @@ class AppUI:
         
         # ========== 控制按钮区域 ==========
         # 创建一个带标题的标签框架，用于放置控制按钮
-        control_frame = ttk.LabelFrame(self.main_frame, text="控制", padding="5")
+        # 使用固定宽度，不随窗口变化
+        control_frame = ttk.LabelFrame(self.right_frame, text="控制", padding="5")
         control_frame.pack(fill=tk.X, pady=(0, 10))
+        # 固定宽度，防止随窗口变化
+        control_frame.pack_propagate(False)
         
         # 开始按钮，点击时开始截图监控
         self.start_btn = ttk.Button(control_frame, text="开启截图")
@@ -91,10 +123,13 @@ class AppUI:
         self.apply_interval_btn = ttk.Button(control_frame, text="应用")
         self.apply_interval_btn.grid(row=1, column=2, padx=5, pady=5)
         
-        # ========== 图像显示区域 ==========
+        # ========== 图像显示区域（自适应窗口大小）==========
         # 创建一个带标题的标签框架，用于显示屏幕截图
-        image_frame = ttk.LabelFrame(self.main_frame, text="屏幕截图", padding="5")
+        # 使用固定宽度，不随窗口变化
+        image_frame = ttk.LabelFrame(self.right_frame, text="屏幕截图", padding="5")
         image_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # 固定宽度，防止随窗口变化
+        image_frame.pack_propagate(False)
         
         # 创建图像显示的子框架，用于布局前帧和后帧
         image_content_frame = ttk.Frame(image_frame)
@@ -126,18 +161,6 @@ class AppUI:
         
         # 初始化图像显示区域，设置默认的空白图像
         self.init_image_display()
-        
-        # ========== 日志显示区域 ==========
-        # 创建一个带标题的标签框架，用于显示操作日志
-        log_frame = ttk.LabelFrame(self.main_frame, text="日志", padding="5")
-        log_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # 创建可滚动的文本框，用于显示日志信息
-        # wrap=tk.WORD 表示在单词边界处换行
-        self.log_text = scrolledtext.ScrolledText(log_frame, width=80, height=10, wrap=tk.WORD)
-        self.log_text.pack(fill=tk.BOTH, expand=True)
-        # 设置为只读状态，防止用户修改日志内容
-        self.log_text.config(state=tk.DISABLED)
     
     def init_image_display(self):
         """初始化图像显示区域，设置默认的空白图像
@@ -147,7 +170,8 @@ class AppUI:
         """
         # 创建一个灰色的空白图像作为占位符
         # 使用RGB模式，颜色为灰色
-        default_image = Image.new('RGB', (IMAGE_DISPLAY_WIDTH, IMAGE_DISPLAY_HEIGHT), color='gray')
+        # 注意：不使用固定尺寸，让label自动适应
+        default_image = Image.new('RGB', (100, 100), color='gray')
         
         # 将PIL图像转换为Tkinter可显示的PhotoImage对象
         default_photo = ImageTk.PhotoImage(default_image)
@@ -161,6 +185,24 @@ class AppUI:
         # 设置后帧图像标签显示占位图像
         self.curr_image_label.configure(image=default_photo, text="后帧")
         self.curr_image_label.image = default_photo
+    
+    def _configure_log_tags(self):
+        """配置日志文本的颜色标签
+        
+        为不同类型的日志消息配置不同的颜色：
+        - info: 信息日志（蓝色）
+        - success: 成功日志（绿色）
+        - warning: 警告日志（橙色）
+        - error: 错误日志（红色）
+        - path: 文件路径（灰色）
+        - processing: 处理中日志（黄色）
+        """
+        self.log_text.tag_config("info", foreground="#0066CC")
+        self.log_text.tag_config("success", foreground="#0fffa0")
+        self.log_text.tag_config("warning", foreground="#FF9900")
+        self.log_text.tag_config("error", foreground="#CC0000")
+        self.log_text.tag_config("path", foreground="#c0c0c0")
+        self.log_text.tag_config("processing", foreground="#FFD700")
     
     def update_device_list(self, devices):
         """更新设备下拉列表
@@ -180,7 +222,7 @@ class AppUI:
         else:
             # 如果没有设备，清空选择并显示提示信息
             self.selected_device.set("")
-            self.log_message("未检测到连接的设备")
+            self.log_message("未检测到连接的设备", "warning")
     
     def update_images(self, image):
         """更新图像显示，保持最新的两张截图
@@ -235,7 +277,8 @@ class AppUI:
                 
                 # 按比例调整图像大小，保持宽高比
                 # thumbnail方法会保持图像的宽高比
-                pil_img.thumbnail((IMAGE_DISPLAY_WIDTH, IMAGE_DISPLAY_HEIGHT))
+                # 不使用固定尺寸，让label自动适应窗口大小
+                pil_img.thumbnail((self.root.winfo_width() - 20, self.root.winfo_height() - 20))
                 
                 return pil_img
             return None
@@ -262,21 +305,39 @@ class AppUI:
             # 保存PhotoImage对象引用，防止被垃圾回收
             self.curr_image_label.image = curr_photo
     
-    def log_message(self, message):
+    def log_message(self, message, log_type="info"):
         """在日志文本框中添加一条消息
         
         Args:
-            message: 要添加的日志消息内容
+            message: 要添加的日志消息内容，可以是字符串或元组列表
+                     如果是字符串，整个消息使用 log_type 颜色
+                     如果是元组列表，每个元组格式为 (text, log_type)，支持同一行多颜色
+            log_type: 日志类型，可选值：
+                      - "info": 信息日志（蓝色，默认）
+                      - "success": 成功日志（绿色）
+                      - "warning": 警告日志（橙色）
+                      - "error": 错误日志（红色）
+                      - "path": 文件路径（灰色）
+                      - "processing": 处理中日志（黄色）
         
         说明：
             消息会自动添加换行符，并滚动到最新消息的位置
             日志文本框是只读的，用户不能修改内容
+            不同类型的日志会以不同颜色显示
+            支持同一条消息中不同部分使用不同颜色
         """
         # 临时启用文本框的可编辑状态
         self.log_text.config(state=tk.NORMAL)
         
-        # 在文本框末尾插入新消息，并添加换行符
-        self.log_text.insert(tk.END, f"{message}\n")
+        # 判断 message 是字符串还是元组列表
+        if isinstance(message, str):
+            # 如果是字符串，整个消息使用 log_type 颜色
+            self.log_text.insert(tk.END, f"{message}\n", log_type)
+        elif isinstance(message, list):
+            # 如果是元组列表，每个部分使用不同的颜色
+            for text, color_type in message:
+                self.log_text.insert(tk.END, text, color_type)
+            self.log_text.insert(tk.END, "\n")
         
         # 滚动到文本框末尾，显示最新消息
         self.log_text.see(tk.END)

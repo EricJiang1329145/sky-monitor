@@ -6,6 +6,7 @@ import cv2
 import sys
 import os
 import glob
+import numpy as np
 from datetime import datetime
 from config import ADB_PATH
 
@@ -31,59 +32,46 @@ def take_screenshot(device_id=None, adb_path=None):
     if adb_path is None:
         adb_path = ADB_PATH
     
-    # 设备上的临时截图文件路径
-    device_screenshot_path = "/sdcard/screenshot_temp.png"
-    
     try:
-        # 第一步：在设备上执行截图并保存到临时文件
-        cmd1 = [adb_path]
+        # 使用 exec-out 命令直接获取二进制数据（优化性能，只需一次ADB命令）
+        # exec-out 不经过shell，直接输出二进制数据，避免换行符问题
+        cmd = [adb_path]
+        
+        # 如果指定了设备ID，添加 -s 参数指定设备
         if device_id:
-            cmd1.extend(["-s", device_id])
-        cmd1.extend(["shell", "screencap", "-p", device_screenshot_path])
+            cmd.extend(["-s", device_id])
         
-        result1 = subprocess.run(cmd1, 
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              timeout=10)
+        # 添加截图命令：exec-out screencap -p
+        # -p 参数表示以PNG格式输出
+        cmd.extend(["exec-out", "screencap", "-p"])
         
-        if result1.returncode != 0:
-            error_msg = result1.stderr.decode('utf-8', errors='ignore')
-            raise Exception(f"设备端截图失败 (返回码 {result1.returncode}): {error_msg}")
+        # 执行命令并获取截图数据
+        # stdout=subprocess.PIPE 表示捕获标准输出（截图数据）
+        # stderr=subprocess.PIPE 表示捕获错误输出
+        # timeout=10 表示命令执行超时时间为10秒
+        result = subprocess.run(cmd, 
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             timeout=10)
         
-        # 第二步：将截图文件从设备拉取到电脑
-        import tempfile
-        import os
+        # 检查命令执行是否成功
+        # returncode为0表示成功，非0表示失败
+        if result.returncode != 0:
+            error_msg = result.stderr.decode('utf-8', errors='ignore')
+            raise Exception(f"截图失败 (返回码 {result.returncode}): {error_msg}")
         
-        # 创建临时文件
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-            temp_filename = temp_file.name
+        # 将二进制截图数据转换为numpy数组
+        screenshot_data = result.stdout
         
-        cmd2 = [adb_path]
-        if device_id:
-            cmd2.extend(["-s", device_id])
-        cmd2.extend(["pull", device_screenshot_path, temp_filename])
+        # 将二进制数据转换为numpy数组（uint8类型）
+        img_array = np.frombuffer(screenshot_data, np.uint8)
         
-        result2 = subprocess.run(cmd2, 
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              timeout=10)
-        
-        if result2.returncode != 0:
-            error_msg = result2.stderr.decode('utf-8', errors='ignore')
-            # 清理临时文件
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
-            raise Exception(f"拉取截图文件失败 (返回码 {result2.returncode}): {error_msg}")
-        
-        # 第三步：读取截图文件
-        img = cv2.imread(temp_filename)
-        
-        # 清理临时文件
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        # 使用OpenCV解码图像数据
+        # cv2.IMREAD_COLOR 表示以彩色模式读取图像
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
         
         if img is None:
-            raise Exception("图像读取失败，文件可能已损坏")
+            raise Exception("图像解码失败，返回的数据可能不是有效的PNG格式")
         
         return img
     except subprocess.TimeoutExpired:
@@ -165,7 +153,6 @@ def cleanup_old_screenshots():
             # 删除最旧的文件
             for i in range(files_to_delete):
                 os.remove(png_files[i])
-                print(f"已删除旧截图: {png_files[i]}")
     except Exception as e:
         # 如果清理失败，打印错误信息但不影响主流程
         print(f"清理旧截图文件失败: {e}")
