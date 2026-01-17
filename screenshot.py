@@ -41,7 +41,6 @@ def take_screenshot(device_id=None, adb_path=None):
             cmd1.extend(["-s", device_id])
         cmd1.extend(["shell", "screencap", "-p", device_screenshot_path])
         
-        print(f"执行命令1: {' '.join(cmd1)}")
         result1 = subprocess.run(cmd1, 
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
@@ -49,9 +48,7 @@ def take_screenshot(device_id=None, adb_path=None):
         
         if result1.returncode != 0:
             error_msg = result1.stderr.decode('utf-8', errors='ignore')
-            print(f"ADB命令1返回错误码: {result1.returncode}")
-            print(f"错误信息: {error_msg}")
-            raise Exception(f"设备端截图失败: {error_msg}")
+            raise Exception(f"设备端截图失败 (返回码 {result1.returncode}): {error_msg}")
         
         # 第二步：将截图文件从设备拉取到电脑
         import tempfile
@@ -66,7 +63,6 @@ def take_screenshot(device_id=None, adb_path=None):
             cmd2.extend(["-s", device_id])
         cmd2.extend(["pull", device_screenshot_path, temp_filename])
         
-        print(f"执行命令2: {' '.join(cmd2)}")
         result2 = subprocess.run(cmd2, 
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
@@ -74,12 +70,10 @@ def take_screenshot(device_id=None, adb_path=None):
         
         if result2.returncode != 0:
             error_msg = result2.stderr.decode('utf-8', errors='ignore')
-            print(f"ADB命令2返回错误码: {result2.returncode}")
-            print(f"错误信息: {error_msg}")
             # 清理临时文件
             if os.path.exists(temp_filename):
                 os.remove(temp_filename)
-            raise Exception(f"拉取截图文件失败: {error_msg}")
+            raise Exception(f"拉取截图文件失败 (返回码 {result2.returncode}): {error_msg}")
         
         # 第三步：读取截图文件
         img = cv2.imread(temp_filename)

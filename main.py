@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from adb_manager import ADBManager
 from ui import AppUI
-from config import SCREENSHOT_INTERVAL
+from config import DEFAULT_SCREENSHOT_INTERVAL
 
 # 导入截图工具模块
 from screenshot import save_screenshot as screenshot_save_screenshot
@@ -30,7 +30,6 @@ class SkyMonitorApp:
         # 初始化变量
         self.monitor_thread = None  # 监控线程对象
         self.is_running = False  # 监控运行状态标志
-        self.screenshot_count = 0  # 截图计数器，用于标注先后关系
         
         # 绑定事件处理，将按钮点击事件与处理函数关联
         self.bind_events()
@@ -48,6 +47,9 @@ class SkyMonitorApp:
         
         # 停止截图按钮：点击时调用 stop_monitoring 方法
         self.ui.stop_btn.configure(command=self.stop_monitoring)
+        
+        # 应用间隔按钮：点击时应用新的截图间隔设置
+        self.ui.apply_interval_btn.configure(command=self.apply_interval)
     
     def refresh_devices(self):
         """刷新连接的安卓设备列表"""
@@ -104,6 +106,11 @@ class SkyMonitorApp:
         # 在日志中记录停止监控的信息
         self.ui.log_message("停止截图监控")
     
+    def apply_interval(self):
+        """应用新的截图间隔设置"""
+        interval = self.ui.get_interval()
+        self.ui.log_message(f"截图间隔已设置为 {interval} 秒")
+    
     def monitor_loop(self, device_id):
         """监控循环函数，在独立线程中运行，定时执行截图操作
         
@@ -128,22 +135,18 @@ class SkyMonitorApp:
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
                     filename = f"{SCREENSHOT_DIR}/screenshot_{timestamp}.png"
                     
-                    # 根据截图计数器确定标签
-                    # 奇数截图标注为"后帧"，偶数截图标注为"前帧"
-                    self.screenshot_count += 1
-                    label = "后帧" if self.screenshot_count % 2 == 1 else "前帧"
-                    
-                    # 保存截图到本地文件，并添加文本标注
-                    self.save_screenshot(screenshot, filename, label)
+                    # 保存截图到本地文件（不添加文本标注，由UI负责显示）
+                    self.save_screenshot(screenshot, filename)
                     
                     # 在日志中显示截图成功的信息
-                    self.ui.log_message(f"截图成功（{label}），已保存到 {filename}")
+                    self.ui.log_message(f"截图成功，已保存到 {filename}")
                 else:
                     # 截图失败，在日志中显示错误信息
                     self.ui.log_message("截图失败")
                 
                 # 等待指定的截图间隔时间（秒）
-                time.sleep(SCREENSHOT_INTERVAL)
+                interval = self.ui.get_interval()
+                time.sleep(interval)
             
             except Exception as e:
                 # 捕获异常并记录错误信息

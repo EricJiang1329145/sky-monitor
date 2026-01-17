@@ -78,6 +78,19 @@ class AppUI:
         status_label = ttk.Label(control_frame, textvariable=self.status_var, font=("Arial", 10, "bold"))
         status_label.grid(row=0, column=2, padx=5, pady=5, sticky=tk.E)
         
+        # 截图间隔设置
+        ttk.Label(control_frame, text="间隔(秒):").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        
+        # 截图间隔输入框，允许用户设置截图间隔时间
+        self.interval_var = tk.DoubleVar(value=1.0)
+        self.interval_spinbox = ttk.Spinbox(control_frame, from_=0.1, to=10.0, increment=0.1, 
+                                       textvariable=self.interval_var, width=10)
+        self.interval_spinbox.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        # 应用间隔按钮，点击时应用新的间隔设置
+        self.apply_interval_btn = ttk.Button(control_frame, text="应用")
+        self.apply_interval_btn.grid(row=1, column=2, padx=5, pady=5)
+        
         # ========== 图像显示区域 ==========
         # 创建一个带标题的标签框架，用于显示屏幕截图
         image_frame = ttk.LabelFrame(self.main_frame, text="屏幕截图", padding="5")
@@ -87,13 +100,29 @@ class AppUI:
         image_content_frame = ttk.Frame(image_frame)
         image_content_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 前帧图像显示标签，显示上一张截图
-        self.prev_image_label = ttk.Label(image_content_frame, text="前帧")
-        self.prev_image_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # 前帧显示区域
+        prev_frame = ttk.Frame(image_content_frame)
+        prev_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # 后帧图像显示标签，显示当前截图
-        self.curr_image_label = ttk.Label(image_content_frame, text="后帧")
-        self.curr_image_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # 前帧标题标签
+        prev_title = ttk.Label(prev_frame, text="前帧", font=("Arial", 12, "bold"))
+        prev_title.pack(pady=(0, 5))
+        
+        # 前帧图像显示标签
+        self.prev_image_label = ttk.Label(prev_frame)
+        self.prev_image_label.pack(fill=tk.BOTH, expand=True)
+        
+        # 后帧显示区域
+        curr_frame = ttk.Frame(image_content_frame)
+        curr_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 后帧标题标签
+        curr_title = ttk.Label(curr_frame, text="后帧", font=("Arial", 12, "bold"))
+        curr_title.pack(pady=(0, 5))
+        
+        # 后帧图像显示标签
+        self.curr_image_label = ttk.Label(curr_frame)
+        self.curr_image_label.pack(fill=tk.BOTH, expand=True)
         
         # 初始化图像显示区域，设置默认的空白图像
         self.init_image_display()
@@ -219,7 +248,7 @@ class AppUI:
                 # 将PIL图像转换为Tkinter的PhotoImage对象
                 prev_photo = ImageTk.PhotoImage(prev_pil_img)
                 # 更新前帧标签的显示
-                self.prev_image_label.configure(image=prev_photo, text="前帧")
+                self.prev_image_label.configure(image=prev_photo)
                 # 保存PhotoImage对象引用，防止被垃圾回收
                 self.prev_image_label.image = prev_photo
         
@@ -229,7 +258,7 @@ class AppUI:
             # 将PIL图像转换为Tkinter的PhotoImage对象
             curr_photo = ImageTk.PhotoImage(curr_pil_img)
             # 更新后帧标签的显示
-            self.curr_image_label.configure(image=curr_photo, text="后帧")
+            self.curr_image_label.configure(image=curr_photo)
             # 保存PhotoImage对象引用，防止被垃圾回收
             self.curr_image_label.image = curr_photo
     
@@ -264,6 +293,14 @@ class AppUI:
         # 更新状态变量的值，状态标签会自动更新显示
         self.status_var.set(status)
     
+    def get_interval(self):
+        """获取当前设置的截图间隔时间
+        
+        Returns:
+            float: 截图间隔时间（秒）
+        """
+        return self.interval_var.get()
+    
     def set_monitoring_state(self, is_monitoring):
         """设置监控状态，并相应地启用或禁用相关按钮
         
@@ -290,9 +327,13 @@ class AppUI:
             self.stop_btn.state(['!disabled'])  # 启用停止按钮
             self.refresh_btn.state(['disabled'])  # 禁用刷新按钮
             self.device_combobox.state(['disabled'])  # 禁用设备选择框
+            self.interval_spinbox.state(['disabled'])  # 禁用间隔设置
+            self.apply_interval_btn.state(['disabled'])  # 禁用应用按钮
         else:
             # 停止监控时的UI状态
             self.start_btn.state(['!disabled'])  # 启用开始按钮
             self.stop_btn.state(['disabled'])  # 禁用停止按钮
             self.refresh_btn.state(['!disabled'])  # 启用刷新按钮
             self.device_combobox.state(['!disabled'])  # 启用设备选择框
+            self.interval_spinbox.state(['!disabled'])  # 启用间隔设置
+            self.apply_interval_btn.state(['!disabled'])  # 启用应用按钮

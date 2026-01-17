@@ -5,7 +5,8 @@
 # 截图频率（秒）
 # 控制两次截图之间的时间间隔
 # 较小的值会提高截图频率，但会增加CPU和存储负担
-SCREENSHOT_INTERVAL = 3
+# 默认值为1秒，可以在UI中动态调整
+DEFAULT_SCREENSHOT_INTERVAL = 1
 
 # ADB命令配置
 # ADB（Android Debug Bridge）可执行文件的路径
