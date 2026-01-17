@@ -219,6 +219,54 @@ def list_devices(adb_path=None):
         return []
 
 
+def tap(x, y, device_id=None, adb_path=None):
+    """在安卓设备屏幕上模拟点击操作
+    
+    Args:
+        x: 点击的X坐标
+        y: 点击的Y坐标
+        device_id: 要操作的设备ID，如果为None则使用默认设备
+        adb_path: ADB命令路径，如果为None则使用配置文件中的路径
+    
+    Returns:
+        bool: 点击操作是否成功
+    """
+    # 如果没有指定ADB路径，使用配置文件中的路径
+    if adb_path is None:
+        adb_path = ADB_PATH
+    
+    try:
+        # 构建ADB命令
+        cmd = [adb_path]
+        
+        # 如果指定了设备ID，添加 -s 参数指定设备
+        if device_id:
+            cmd.extend(["-s", device_id])
+        
+        # 添加点击命令：shell input tap x y
+        cmd.extend(["shell", "input", "tap", str(x), str(y)])
+        
+        # 执行命令
+        result = subprocess.run(cmd, 
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             timeout=5)
+        
+        # 检查命令执行是否成功
+        if result.returncode != 0:
+            error_msg = result.stderr.decode('utf-8', errors='ignore')
+            raise Exception(f"点击失败 (返回码 {result.returncode}): {error_msg}")
+        
+        return True
+    except subprocess.TimeoutExpired:
+        print("错误：命令执行超时")
+        return False
+    except Exception as e:
+        # 如果点击过程中出现异常，打印错误信息并返回False
+        print(f"点击失败: {e}")
+        return False
+
+
 if __name__ == "__main__":
     """当直接运行此文件时，执行一次截图并保存"""
     print("=== 安卓设备截图工具 ===")

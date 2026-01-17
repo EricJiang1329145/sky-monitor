@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext
 from PIL import Image, ImageTk
 import cv2
-from config import IMAGE_DISPLAY_WIDTH, IMAGE_DISPLAY_HEIGHT
+from config import IMAGE_DISPLAY_WIDTH, IMAGE_DISPLAY_HEIGHT, IMAGE_ASPECT_RATIO
 
 class AppUI:
     """应用程序用户界面类，负责创建和管理所有UI组件"""
@@ -16,8 +16,16 @@ class AppUI:
         # 设置窗口标题
         self.root.title("光遇消息检测工具")
         
-        # 设置窗口初始大小为800x700像素
-        self.root.geometry("800x700")
+        # 设置窗口为大窗口尺寸（接近全屏但留有边距）
+        self.root.geometry("1400x900")
+        
+        # 设置窗口居中显示
+        self.root.update_idletasks()
+        width = self.root.winfo_width()
+        height = self.root.winfo_height()
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
         
         # 设置ttk组件的样式
         # padding=6 设置按钮内边距，relief="flat" 设置按钮为扁平样式
@@ -33,6 +41,9 @@ class AppUI:
         # 图像数据存储列表，保持最新的两张截图
         # 用于在界面上同时显示前帧和后帧
         self.images = []
+        
+        # 图像显示宽度变量（临时设置），高度根据固定比例自动计算
+        self.display_width = tk.IntVar(value=IMAGE_DISPLAY_WIDTH)
         
         # 创建主框架，使用10像素的内边距
         self.main_frame = ttk.Frame(root, padding="10")
@@ -122,6 +133,41 @@ class AppUI:
         # 应用间隔按钮，点击时应用新的间隔设置
         self.apply_interval_btn = ttk.Button(control_frame, text="应用")
         self.apply_interval_btn.grid(row=1, column=2, padx=5, pady=5)
+        
+        # ========== 图像显示尺寸设置（临时）==========
+        ttk.Label(control_frame, text="显示宽度:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+        
+        # 宽度拖动条
+        self.width_scale = ttk.Scale(control_frame, from_=100, to=800, orient=tk.HORIZONTAL,
+                                variable=self.display_width, length=150, command=self.on_width_change)
+        self.width_scale.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        # 宽度值显示标签
+        self.width_value_label = ttk.Label(control_frame, text=str(self.display_width.get()))
+        self.width_value_label.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
+        
+        # 应用尺寸按钮
+        self.apply_size_btn = ttk.Button(control_frame, text="应用尺寸")
+        self.apply_size_btn.grid(row=2, column=3, padx=5, pady=5)
+        
+        # ========== 模拟点击功能 ==========
+        ttk.Label(control_frame, text="点击坐标:").grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
+        
+        # X坐标输入框
+        self.tap_x_var = tk.IntVar(value=500)
+        self.tap_x_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
+                                      textvariable=self.tap_x_var, width=8)
+        self.tap_x_spinbox.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        # Y坐标输入框
+        self.tap_y_var = tk.IntVar(value=500)
+        self.tap_y_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
+                                      textvariable=self.tap_y_var, width=8)
+        self.tap_y_spinbox.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
+        
+        # 点击按钮
+        self.tap_btn = ttk.Button(control_frame, text="点击")
+        self.tap_btn.grid(row=3, column=3, padx=5, pady=5)
         
         # ========== 图像显示区域（自适应窗口大小）==========
         # 创建一个带标题的标签框架，用于显示屏幕截图
@@ -275,10 +321,11 @@ class AppUI:
                 # 从numpy数组创建PIL图像对象
                 pil_img = Image.fromarray(img_rgb)
                 
-                # 按比例调整图像大小，保持宽高比
-                # thumbnail方法会保持图像的宽高比
-                # 不使用固定尺寸，让label自动适应窗口大小
-                pil_img.thumbnail((self.root.winfo_width() - 20, self.root.winfo_height() - 20))
+                # 使用UI变量中定义的宽度，高度根据固定比例自动计算
+                # 保持宽高比，使用thumbnail方法
+                display_width = self.display_width.get()
+                display_height = int(display_width * IMAGE_ASPECT_RATIO)
+                pil_img.thumbnail((display_width, display_height))
                 
                 return pil_img
             return None
@@ -345,6 +392,17 @@ class AppUI:
         # 恢复文本框的只读状态
         self.log_text.config(state=tk.DISABLED)
     
+    def on_width_change(self, value):
+        """当拖动条值改变时更新显示的宽度值
+        
+        Args:
+            value: 拖动条的当前值
+        """
+        self.width_value_label.config(text=str(int(float(value))))
+        # 如果有图像，立即更新显示
+        if self.images:
+            self._update_image_labels()
+    
     def update_status(self, status):
         """更新状态标签的显示内容
         
@@ -361,6 +419,14 @@ class AppUI:
             float: 截图间隔时间（秒）
         """
         return self.interval_var.get()
+    
+    def get_tap_coordinates(self):
+        """获取当前设置的点击坐标
+        
+        Returns:
+            tuple: (x, y) 坐标元组
+        """
+        return self.tap_x_var.get(), self.tap_y_var.get()
     
     def set_monitoring_state(self, is_monitoring):
         """设置监控状态，并相应地启用或禁用相关按钮

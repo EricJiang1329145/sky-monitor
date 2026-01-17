@@ -19,6 +19,8 @@ ADB_PATH = "adb"
 # 这些尺寸仅影响显示效果，不影响实际保存的截图分辨率
 IMAGE_DISPLAY_WIDTH = 320
 IMAGE_DISPLAY_HEIGHT = 569  # 16:9 比例，适配常见手机屏幕比例
+# 图像显示的宽高比（高度/宽度）
+IMAGE_ASPECT_RATIO = IMAGE_DISPLAY_HEIGHT / IMAGE_DISPLAY_WIDTH
 
 # 日志配置
 # 日志级别，可选值：DEBUG, INFO, WARNING, ERROR, CRITICAL

@@ -7,6 +7,7 @@ from config import ADB_PATH
 # 导入截图工具模块
 from screenshot import take_screenshot as screenshot_take_screenshot
 from screenshot import list_devices as screenshot_list_devices
+from screenshot import tap as screenshot_tap
 
 class ADBManager:
     """ADB管理器类，用于与安卓设备进行通信"""
@@ -36,3 +37,17 @@ class ADBManager:
         """
         # 调用 screenshot 模块的 take_screenshot 函数
         return screenshot_take_screenshot(device_id, self.adb_path)
+    
+    def tap(self, x, y, device_id=None):
+        """在安卓设备屏幕上模拟点击操作
+        
+        Args:
+            x: 点击的X坐标
+            y: 点击的Y坐标
+            device_id: 要操作的设备ID，如果为None则使用默认设备
+        
+        Returns:
+            bool: 点击操作是否成功
+        """
+        # 调用 screenshot 模块的 tap 函数
+        return screenshot_tap(x, y, device_id, self.adb_path)

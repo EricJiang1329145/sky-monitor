@@ -7,7 +7,7 @@ import time
 from datetime import datetime
 from adb_manager import ADBManager
 from ui import AppUI
-from config import DEFAULT_SCREENSHOT_INTERVAL
+from config import DEFAULT_SCREENSHOT_INTERVAL, IMAGE_ASPECT_RATIO
 
 # 导入截图工具模块
 from screenshot import save_screenshot as screenshot_save_screenshot
@@ -50,6 +50,12 @@ class SkyMonitorApp:
         
         # 应用间隔按钮：点击时应用新的截图间隔设置
         self.ui.apply_interval_btn.configure(command=self.apply_interval)
+        
+        # 应用尺寸按钮：点击时应用新的显示尺寸设置
+        self.ui.apply_size_btn.configure(command=self.apply_size)
+        
+        # 点击按钮：点击时执行模拟点击操作
+        self.ui.tap_btn.configure(command=self.perform_tap)
     
     def refresh_devices(self):
         """刷新连接的安卓设备列表"""
@@ -109,7 +115,45 @@ class SkyMonitorApp:
     def apply_interval(self):
         """应用新的截图间隔设置"""
         interval = self.ui.get_interval()
-        self.ui.log_message(f"截图间隔已设置为 {interval} 秒")
+        self.ui.log_message(f"截图间隔已设置为 {interval} 秒", "info")
+    
+    def apply_size(self):
+        """应用新的显示尺寸设置"""
+        width = self.ui.display_width.get()
+        height = int(width * IMAGE_ASPECT_RATIO)
+        self.ui.log_message([
+            ("显示尺寸已设置为：", "info"),
+            (f" {width}x{height}", "path")
+        ])
+        # 如果有图像，立即更新显示
+        if self.ui.images:
+            self.ui._update_image_labels()
+    
+    def perform_tap(self):
+        """执行模拟点击操作"""
+        # 获取当前选中的设备
+        device_id = self.ui.selected_device.get()
+        if not device_id:
+            self.ui.log_message("请先选择设备", "warning")
+            return
+        
+        # 获取点击坐标
+        x, y = self.ui.get_tap_coordinates()
+        
+        # 执行点击操作
+        success = self.adb_manager.tap(x, y, device_id)
+        
+        if success:
+            self.ui.log_message([
+                ("点击成功，坐标：", "success"),
+                (f" ({x}, {y})", "path")
+            ])
+        else:
+            self.ui.log_message([
+                ("点击失败，坐标：", "error"),
+                (f" ({x}, {y})", "path")
+            ])
+    
     
     def monitor_loop(self, device_id):
         """监控循环函数，在独立线程中运行，定时执行截图操作
