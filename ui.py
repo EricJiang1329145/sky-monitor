@@ -105,111 +105,16 @@ class AppUI:
         self.device_info_text.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W+tk.E)
         self.device_info_text.config(state=tk.DISABLED)
         
-        # ========== 控制按钮区域 ==========
-        # 创建一个带标题的标签框架，用于放置控制按钮
-        # 使用固定宽度，不随窗口变化
-        control_frame = ttk.LabelFrame(self.right_frame, text="控制", padding="5")
-        control_frame.pack(fill=tk.X, pady=(0, 10))
-        # 固定宽度，防止随窗口变化
-        control_frame.pack_propagate(False)
+        # ========== 选项卡控制区域 ==========
+        # 创建选项卡控件
+        self.notebook = ttk.Notebook(self.right_frame)
+        self.notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
-        # 开始按钮，点击时开始截图监控
-        self.start_btn = ttk.Button(control_frame, text="开启截图")
-        self.start_btn.grid(row=0, column=0, padx=5, pady=5)
-        
-        # 停止按钮，点击时停止截图监控
-        self.stop_btn = ttk.Button(control_frame, text="停止截图")
-        self.stop_btn.grid(row=0, column=1, padx=5, pady=5)
-        
-        # 状态显示标签，使用粗体字体显示当前状态
-        self.status_var = tk.StringVar(value="就绪")
-        status_label = ttk.Label(control_frame, textvariable=self.status_var, font=("Arial", 10, "bold"))
-        status_label.grid(row=0, column=2, padx=5, pady=5, sticky=tk.E)
-        
-        # 截图间隔设置
-        ttk.Label(control_frame, text="间隔(秒):").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-        
-        # 截图间隔输入框，允许用户设置截图间隔时间
-        self.interval_var = tk.DoubleVar(value=1.0)
-        self.interval_spinbox = ttk.Spinbox(control_frame, from_=0.1, to=10.0, increment=0.1, 
-                                       textvariable=self.interval_var, width=10)
-        self.interval_spinbox.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
-        
-        # 应用间隔按钮，点击时应用新的间隔设置
-        self.apply_interval_btn = ttk.Button(control_frame, text="应用")
-        self.apply_interval_btn.grid(row=1, column=2, padx=5, pady=5)
-        
-        # ========== 图像显示尺寸设置（临时）==========
-        ttk.Label(control_frame, text="显示宽度:").grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
-        
-        # 宽度拖动条
-        self.width_scale = ttk.Scale(control_frame, from_=100, to=800, orient=tk.HORIZONTAL,
-                                variable=self.display_width, length=150, command=self.on_width_change)
-        self.width_scale.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
-        
-        # 宽度值显示标签
-        self.width_value_label = ttk.Label(control_frame, text=str(self.display_width.get()))
-        self.width_value_label.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
-        
-        # 应用尺寸按钮
-        self.apply_size_btn = ttk.Button(control_frame, text="应用尺寸")
-        self.apply_size_btn.grid(row=2, column=3, padx=5, pady=5)
-        
-        # ========== 模拟点击功能 ==========
-        ttk.Label(control_frame, text="点击坐标:").grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
-        
-        # X坐标输入框
-        self.tap_x_var = tk.IntVar(value=500)
-        self.tap_x_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
-                                      textvariable=self.tap_x_var, width=8)
-        self.tap_x_spinbox.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
-        
-        # Y坐标输入框
-        self.tap_y_var = tk.IntVar(value=500)
-        self.tap_y_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
-                                      textvariable=self.tap_y_var, width=8)
-        self.tap_y_spinbox.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
-        
-        # 点击按钮
-        self.tap_btn = ttk.Button(control_frame, text="点击")
-        self.tap_btn.grid(row=3, column=3, padx=5, pady=5)
-        
-        # ========== 文本输入功能 ==========
-        ttk.Label(control_frame, text="输入文本:").grid(row=4, column=0, padx=5, pady=5, sticky=tk.W)
-        
-        # 文本输入框
-        self.input_text_var = tk.StringVar(value="")
-        self.input_text_entry = ttk.Entry(control_frame, textvariable=self.input_text_var, width=30)
-        self.input_text_entry.grid(row=4, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
-        # 绑定回车键事件，按回车自动发送文本
-        self.input_text_entry.bind('<Return>', self.on_text_enter)
-        
-        # 发送文本按钮
-        self.send_text_btn = ttk.Button(control_frame, text="发送")
-        self.send_text_btn.grid(row=4, column=3, padx=5, pady=5)
-        
-        # ========== 搜索设置 ==========
-        # 触发搜索勾选框（默认不勾选）
-        self.trigger_search_var = tk.BooleanVar(value=False)
-        self.trigger_search_checkbox = ttk.Checkbutton(control_frame, text="触发搜索", variable=self.trigger_search_var)
-        self.trigger_search_checkbox.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky=tk.W)
-        
-        # 搜索按钮坐标输入框
-        ttk.Label(control_frame, text="搜索X:").grid(row=6, column=0, padx=5, pady=5, sticky=tk.W)
-        self.search_x_var = tk.IntVar(value=1000)
-        self.search_x_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
-                                       textvariable=self.search_x_var, width=8)
-        self.search_x_spinbox.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
-        
-        ttk.Label(control_frame, text="搜索Y:").grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
-        self.search_y_var = tk.IntVar(value=500)
-        self.search_y_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
-                                       textvariable=self.search_y_var, width=8)
-        self.search_y_spinbox.grid(row=6, column=3, padx=5, pady=5, sticky=tk.W)
-        
-        # 文本输入提示
-        tip_label = ttk.Label(control_frame, text="提示：发送前请先点击手机上的输入框", font=("Arial", 8), foreground="#666666")
-        tip_label.grid(row=7, column=0, columnspan=4, padx=5, pady=2, sticky=tk.W)
+        # 创建各个选项卡
+        self.create_screenshot_tab()
+        self.create_tap_tab()
+        self.create_text_tab()
+        self.create_sky_input_tab()
         
         # ========== 图像显示区域（自适应窗口大小）==========
         # 创建一个带标题的标签框架，用于显示屏幕截图
@@ -249,6 +154,177 @@ class AppUI:
         
         # 初始化图像显示区域，设置默认的空白图像
         self.init_image_display()
+    
+    def create_screenshot_tab(self):
+        """创建截图控制选项卡"""
+        tab_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(tab_frame, text="截图控制")
+        
+        # 开始/停止按钮行
+        btn_frame = ttk.Frame(tab_frame)
+        btn_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.start_btn = ttk.Button(btn_frame, text="开启截图")
+        self.start_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.stop_btn = ttk.Button(btn_frame, text="停止截图")
+        self.stop_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 状态显示
+        self.status_var = tk.StringVar(value="就绪")
+        status_label = ttk.Label(btn_frame, textvariable=self.status_var, font=("Arial", 10, "bold"))
+        status_label.pack(side=tk.LEFT, padx=20)
+        
+        # 截图间隔设置
+        interval_frame = ttk.Frame(tab_frame)
+        interval_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(interval_frame, text="截图间隔(秒):").pack(side=tk.LEFT, padx=5)
+        self.interval_var = tk.DoubleVar(value=1.0)
+        self.interval_spinbox = ttk.Spinbox(interval_frame, from_=0.1, to=10.0, increment=0.1, 
+                                       textvariable=self.interval_var, width=10)
+        self.interval_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        self.apply_interval_btn = ttk.Button(interval_frame, text="应用")
+        self.apply_interval_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 图像显示尺寸设置
+        size_frame = ttk.Frame(tab_frame)
+        size_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(size_frame, text="显示宽度:").pack(side=tk.LEFT, padx=5)
+        self.width_scale = ttk.Scale(size_frame, from_=100, to=800, orient=tk.HORIZONTAL,
+                                variable=self.display_width, length=200, command=self.on_width_change)
+        self.width_scale.pack(side=tk.LEFT, padx=5)
+        
+        self.width_value_label = ttk.Label(size_frame, text=str(self.display_width.get()))
+        self.width_value_label.pack(side=tk.LEFT, padx=5)
+        
+        self.apply_size_btn = ttk.Button(size_frame, text="应用尺寸")
+        self.apply_size_btn.pack(side=tk.LEFT, padx=5)
+    
+    def create_tap_tab(self):
+        """创建点击控制选项卡"""
+        tab_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(tab_frame, text="点击控制")
+        
+        # 点击坐标设置
+        coord_frame = ttk.Frame(tab_frame)
+        coord_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(coord_frame, text="X坐标:").pack(side=tk.LEFT, padx=5)
+        self.tap_x_var = tk.IntVar(value=500)
+        self.tap_x_spinbox = ttk.Spinbox(coord_frame, from_=0, to=2000, increment=10,
+                                      textvariable=self.tap_x_var, width=10)
+        self.tap_x_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(coord_frame, text="Y坐标:").pack(side=tk.LEFT, padx=5)
+        self.tap_y_var = tk.IntVar(value=500)
+        self.tap_y_spinbox = ttk.Spinbox(coord_frame, from_=0, to=2000, increment=10,
+                                      textvariable=self.tap_y_var, width=10)
+        self.tap_y_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        # 点击按钮
+        self.tap_btn = ttk.Button(tab_frame, text="执行点击")
+        self.tap_btn.pack(fill=tk.X, pady=10)
+    
+    def create_text_tab(self):
+        """创建文本输入选项卡"""
+        tab_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(tab_frame, text="文本输入")
+        
+        # 文本输入框
+        text_frame = ttk.Frame(tab_frame)
+        text_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(text_frame, text="输入文本:").pack(anchor=tk.W, padx=5)
+        self.input_text_var = tk.StringVar(value="")
+        self.input_text_entry = ttk.Entry(text_frame, textvariable=self.input_text_var, width=40)
+        self.input_text_entry.pack(fill=tk.X, padx=5, pady=5)
+        # 绑定回车键事件
+        self.input_text_entry.bind('<Return>', self.on_text_enter)
+        
+        # 发送按钮
+        self.send_text_btn = ttk.Button(text_frame, text="发送文本")
+        self.send_text_btn.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 搜索设置
+        ttk.Separator(text_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+        
+        self.trigger_search_var = tk.BooleanVar(value=False)
+        self.trigger_search_checkbox = ttk.Checkbutton(text_frame, text="触发搜索", variable=self.trigger_search_var)
+        self.trigger_search_checkbox.pack(anchor=tk.W, padx=5, pady=5)
+        
+        # 搜索按钮坐标
+        search_coord_frame = ttk.Frame(text_frame)
+        search_coord_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(search_coord_frame, text="搜索X:").pack(side=tk.LEFT, padx=5)
+        self.search_x_var = tk.IntVar(value=1000)
+        self.search_x_spinbox = ttk.Spinbox(search_coord_frame, from_=0, to=2000, increment=10,
+                                       textvariable=self.search_x_var, width=10)
+        self.search_x_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(search_coord_frame, text="搜索Y:").pack(side=tk.LEFT, padx=5)
+        self.search_y_var = tk.IntVar(value=500)
+        self.search_y_spinbox = ttk.Spinbox(search_coord_frame, from_=0, to=2000, increment=10,
+                                       textvariable=self.search_y_var, width=10)
+        self.search_y_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        # 提示
+        tip_label = ttk.Label(text_frame, text="提示：发送前请先点击手机上的输入框", 
+                          font=("Arial", 8), foreground="#666666")
+        tip_label.pack(anchor=tk.W, padx=5, pady=10)
+    
+    def create_sky_input_tab(self):
+        """创建 Sky 输入选项卡"""
+        tab_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(tab_frame, text="Sky 输入")
+        
+        # 滑动坐标设置
+        coord_frame = ttk.Frame(tab_frame)
+        coord_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(coord_frame, text="滑动X:").pack(side=tk.LEFT, padx=5)
+        self.sky_x_var = tk.IntVar(value=189)
+        self.sky_x_spinbox = ttk.Spinbox(coord_frame, from_=0, to=2000, increment=10,
+                                     textvariable=self.sky_x_var, width=10)
+        self.sky_x_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Label(coord_frame, text="滑动Y:").pack(side=tk.LEFT, padx=5)
+        self.sky_y_var = tk.IntVar(value=1200)
+        self.sky_y_spinbox = ttk.Spinbox(coord_frame, from_=0, to=2000, increment=10,
+                                     textvariable=self.sky_y_var, width=10)
+        self.sky_y_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        # 文本输入框
+        text_frame = ttk.Frame(tab_frame)
+        text_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(text_frame, text="Sky文本:").pack(anchor=tk.W, padx=5)
+        self.sky_text_var = tk.StringVar(value="test")
+        self.sky_text_entry = ttk.Entry(text_frame, textvariable=self.sky_text_var, width=40)
+        self.sky_text_entry.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 等待时间设置
+        wait_frame = ttk.Frame(tab_frame)
+        wait_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(wait_frame, text="等待时间(秒):").pack(side=tk.LEFT, padx=5)
+        self.sky_wait_var = tk.DoubleVar(value=0.3)
+        self.sky_wait_spinbox = ttk.Spinbox(wait_frame, from_=0.0, to=5.0, increment=0.1,
+                                       textvariable=self.sky_wait_var, width=10)
+        self.sky_wait_spinbox.pack(side=tk.LEFT, padx=5)
+        
+        # Sky 输入按钮
+        self.sky_input_btn = ttk.Button(tab_frame, text="执行 Sky 输入")
+        self.sky_input_btn.pack(fill=tk.X, pady=10)
+        
+        # 说明
+        info_label = ttk.Label(tab_frame,
+                          text="说明：此功能会切换输入法、执行两次滑动、发送文本和回车，最后恢复原输入法。",
+                          font=("Arial", 8), foreground="#666666", wraplength=400)
+        info_label.pack(anchor=tk.W, padx=5, pady=10)
     
     def init_image_display(self):
         """初始化图像显示区域，设置默认的空白图像
@@ -557,6 +633,19 @@ class AppUI:
             return (self.search_x_var.get(), self.search_y_var.get())
         return None
     
+    def get_sky_input_params(self):
+        """获取 Sky 输入参数
+        
+        Returns:
+            dict: 包含 x, y, text, wait_time 的字典
+        """
+        return {
+            'x': self.sky_x_var.get(),
+            'y': self.sky_y_var.get(),
+            'text': self.sky_text_var.get(),
+            'wait_time': self.sky_wait_var.get()
+        }
+    
     def set_monitoring_state(self, is_monitoring):
         """设置监控状态，并相应地启用或禁用相关按钮
         
@@ -568,13 +657,13 @@ class AppUI:
             - 禁用开始按钮（防止重复启动）
             - 启用停止按钮
             - 禁用刷新按钮和设备选择框（防止在监控过程中切换设备）
-            - 禁用搜索设置
+            - 禁用所有选项卡中的输入控件
             
             当停止监控时：
             - 启用开始按钮
             - 禁用停止按钮
             - 启用刷新按钮和设备选择框
-            - 启用搜索设置
+            - 启用所有选项卡中的输入控件
         """
         # 更新监控状态标志
         self.is_monitoring = is_monitoring
@@ -587,9 +676,21 @@ class AppUI:
             self.device_combobox.state(['disabled'])  # 禁用设备选择框
             self.interval_spinbox.state(['disabled'])  # 禁用间隔设置
             self.apply_interval_btn.state(['disabled'])  # 禁用应用按钮
+            self.width_scale.state(['disabled'])  # 禁用宽度拖动条
+            self.apply_size_btn.state(['disabled'])  # 禁用应用尺寸按钮
+            self.tap_x_spinbox.state(['disabled'])  # 禁用点击X坐标
+            self.tap_y_spinbox.state(['disabled'])  # 禁用点击Y坐标
+            self.tap_btn.state(['disabled'])  # 禁用点击按钮
+            self.input_text_entry.state(['disabled'])  # 禁用文本输入
+            self.send_text_btn.state(['disabled'])  # 禁用发送按钮
             self.trigger_search_checkbox.state(['disabled'])  # 禁用搜索勾选框
             self.search_x_spinbox.state(['disabled'])  # 禁用搜索X坐标
             self.search_y_spinbox.state(['disabled'])  # 禁用搜索Y坐标
+            self.sky_x_spinbox.state(['disabled'])  # 禁用 Sky X 坐标
+            self.sky_y_spinbox.state(['disabled'])  # 禁用 Sky Y 坐标
+            self.sky_text_entry.state(['disabled'])  # 禁用 Sky 文本输入
+            self.sky_wait_spinbox.state(['disabled'])  # 禁用 Sky 等待时间
+            self.sky_input_btn.state(['disabled'])  # 禁用 Sky 输入按钮
         else:
             # 停止监控时的UI状态
             self.start_btn.state(['!disabled'])  # 启用开始按钮
@@ -598,6 +699,18 @@ class AppUI:
             self.device_combobox.state(['!disabled'])  # 启用设备选择框
             self.interval_spinbox.state(['!disabled'])  # 启用间隔设置
             self.apply_interval_btn.state(['!disabled'])  # 启用应用按钮
+            self.width_scale.state(['!disabled'])  # 启用宽度拖动条
+            self.apply_size_btn.state(['!disabled'])  # 启用应用尺寸按钮
+            self.tap_x_spinbox.state(['!disabled'])  # 启用点击X坐标
+            self.tap_y_spinbox.state(['!disabled'])  # 启用点击Y坐标
+            self.tap_btn.state(['!disabled'])  # 启用点击按钮
+            self.input_text_entry.state(['!disabled'])  # 启用文本输入
+            self.send_text_btn.state(['!disabled'])  # 启用发送按钮
             self.trigger_search_checkbox.state(['!disabled'])  # 启用搜索勾选框
             self.search_x_spinbox.state(['!disabled'])  # 启用搜索X坐标
             self.search_y_spinbox.state(['!disabled'])  # 启用搜索Y坐标
+            self.sky_x_spinbox.state(['!disabled'])  # 启用 Sky X 坐标
+            self.sky_y_spinbox.state(['!disabled'])  # 启用 Sky Y 坐标
+            self.sky_text_entry.state(['!disabled'])  # 启用 Sky 文本输入
+            self.sky_wait_spinbox.state(['!disabled'])  # 启用 Sky 等待时间
+            self.sky_input_btn.state(['!disabled'])  # 启用 Sky 输入按钮

@@ -12,6 +12,9 @@ from config import DEFAULT_SCREENSHOT_INTERVAL, IMAGE_ASPECT_RATIO
 # 导入截图工具模块
 from screenshot import save_screenshot as screenshot_save_screenshot
 
+# 导入 Sky 输入模块
+from debug_ime import sky_input
+
 # 截图保存目录
 SCREENSHOT_DIR = "screenshots"
 
@@ -59,6 +62,9 @@ class SkyMonitorApp:
         
         # 发送文本按钮：点击时执行发送文本操作
         self.ui.send_text_btn.configure(command=self.send_text)
+        
+        # Sky 输入按钮：点击时执行 Sky 输入操作
+        self.ui.sky_input_btn.configure(command=self.perform_sky_input)
         
         # 设备选择下拉框：选择变化时更新设备信息显示
         self.ui.device_combobox.bind('<<ComboboxSelected>>', self.ui.on_device_change)
@@ -192,6 +198,57 @@ class SkyMonitorApp:
                 ("文本发送失败：", "error"),
                 (f" {text}", "path")
             ])
+    
+    def perform_sky_input(self):
+        """执行 Sky 输入操作"""
+        # 获取当前选中的设备
+        device_id = self.ui.selected_device.get()
+        if not device_id:
+            self.ui.log_message("请先选择设备", "warning")
+            return
+        
+        # 获取 Sky 输入参数
+        params = self.ui.get_sky_input_params()
+        
+        # 检查文本是否为空
+        if not params['text']:
+            self.ui.log_message("请输入要发送的文本", "warning")
+            return
+        
+        # 在日志中显示开始执行 Sky 输入
+        self.ui.log_message([
+            ("开始 Sky 输入，坐标：", "info"),
+            (f" ({params['x']}, {params['y']})", "path"),
+            ("，文本：", "info"),
+            (f" {params['text']}", "path"),
+            ("，等待：", "info"),
+            (f" {params['wait_time']}秒", "path")
+        ])
+        
+        # 在新线程中执行 Sky 输入，避免阻塞 UI
+        def run_sky_input():
+            try:
+                success = sky_input(
+                    device_id=device_id,
+                    x=params['x'],
+                    y=params['y'],
+                    text=params['text'],
+                    wait_time=params['wait_time'],
+                    verbose=False
+                )
+                
+                # 在主线程中更新日志
+                if success:
+                    self.root.after(0, lambda: self.ui.log_message("Sky 输入成功！", "success"))
+                else:
+                    self.root.after(0, lambda: self.ui.log_message("Sky 输入失败！", "error"))
+            except Exception as e:
+                self.root.after(0, lambda: self.ui.log_message(f"Sky 输入错误: {e}", "error"))
+        
+        # 启动线程
+        thread = threading.Thread(target=run_sky_input)
+        thread.daemon = True
+        thread.start()
     
     
     def monitor_loop(self, device_id):
