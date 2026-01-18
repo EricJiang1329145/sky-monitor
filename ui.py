@@ -100,6 +100,11 @@ class AppUI:
         self.refresh_btn = ttk.Button(device_frame, text="刷新设备")
         self.refresh_btn.grid(row=0, column=2, padx=5, pady=5)
         
+        # 设备信息显示区域
+        self.device_info_text = scrolledtext.ScrolledText(device_frame, width=40, height=6, wrap=tk.WORD)
+        self.device_info_text.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky=tk.W+tk.E)
+        self.device_info_text.config(state=tk.DISABLED)
+        
         # ========== 控制按钮区域 ==========
         # 创建一个带标题的标签框架，用于放置控制按钮
         # 使用固定宽度，不随窗口变化
@@ -168,6 +173,43 @@ class AppUI:
         # 点击按钮
         self.tap_btn = ttk.Button(control_frame, text="点击")
         self.tap_btn.grid(row=3, column=3, padx=5, pady=5)
+        
+        # ========== 文本输入功能 ==========
+        ttk.Label(control_frame, text="输入文本:").grid(row=4, column=0, padx=5, pady=5, sticky=tk.W)
+        
+        # 文本输入框
+        self.input_text_var = tk.StringVar(value="")
+        self.input_text_entry = ttk.Entry(control_frame, textvariable=self.input_text_var, width=30)
+        self.input_text_entry.grid(row=4, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
+        # 绑定回车键事件，按回车自动发送文本
+        self.input_text_entry.bind('<Return>', self.on_text_enter)
+        
+        # 发送文本按钮
+        self.send_text_btn = ttk.Button(control_frame, text="发送")
+        self.send_text_btn.grid(row=4, column=3, padx=5, pady=5)
+        
+        # ========== 搜索设置 ==========
+        # 触发搜索勾选框（默认不勾选）
+        self.trigger_search_var = tk.BooleanVar(value=False)
+        self.trigger_search_checkbox = ttk.Checkbutton(control_frame, text="触发搜索", variable=self.trigger_search_var)
+        self.trigger_search_checkbox.grid(row=5, column=0, columnspan=2, padx=5, pady=5, sticky=tk.W)
+        
+        # 搜索按钮坐标输入框
+        ttk.Label(control_frame, text="搜索X:").grid(row=6, column=0, padx=5, pady=5, sticky=tk.W)
+        self.search_x_var = tk.IntVar(value=1000)
+        self.search_x_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
+                                       textvariable=self.search_x_var, width=8)
+        self.search_x_spinbox.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
+        
+        ttk.Label(control_frame, text="搜索Y:").grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
+        self.search_y_var = tk.IntVar(value=500)
+        self.search_y_spinbox = ttk.Spinbox(control_frame, from_=0, to=2000, increment=10,
+                                       textvariable=self.search_y_var, width=8)
+        self.search_y_spinbox.grid(row=6, column=3, padx=5, pady=5, sticky=tk.W)
+        
+        # 文本输入提示
+        tip_label = ttk.Label(control_frame, text="提示：发送前请先点击手机上的输入框", font=("Arial", 8), foreground="#666666")
+        tip_label.grid(row=7, column=0, columnspan=4, padx=5, pady=2, sticky=tk.W)
         
         # ========== 图像显示区域（自适应窗口大小）==========
         # 创建一个带标题的标签框架，用于显示屏幕截图
@@ -254,21 +296,71 @@ class AppUI:
         """更新设备下拉列表
         
         Args:
-            devices: 设备ID列表
+            devices: 设备信息字典列表
         """
         # 保存设备列表到实例变量
         self.devices = devices
         
-        # 更新下拉框的选项值
-        self.device_combobox['values'] = devices
+        # 更新下拉框的选项值，只显示设备ID
+        device_ids = [device['id'] for device in devices]
+        self.device_combobox['values'] = device_ids
         
         # 如果有设备，默认选择第一个设备
         if devices:
-            self.selected_device.set(devices[0])
+            self.selected_device.set(devices[0]['id'])
+            # 显示设备详细信息
+            self.update_device_info(devices[0])
         else:
             # 如果没有设备，清空选择并显示提示信息
             self.selected_device.set("")
             self.log_message("未检测到连接的设备", "warning")
+            self.update_device_info(None)
+    
+    def update_device_info(self, device_info):
+        """更新设备信息显示区域
+        
+        Args:
+            device_info: 设备信息字典，包含id、name、model、android_version等字段
+        """
+        # 临时启用文本框的可编辑状态
+        self.device_info_text.config(state=tk.NORMAL)
+        
+        # 清空现有内容
+        self.device_info_text.delete(1.0, tk.END)
+        
+        if device_info:
+            # 显示设备详细信息
+            info_lines = [
+                f"设备ID: {device_info.get('id', 'N/A')}",
+                f"设备名称: {device_info.get('name', 'N/A')}",
+                f"设备型号: {device_info.get('model', 'N/A')}",
+                f"Android版本: {device_info.get('android_version', 'N/A')}"
+            ]
+            self.device_info_text.insert(tk.END, '\n'.join(info_lines))
+        else:
+            self.device_info_text.insert(tk.END, "未选择设备")
+        
+        # 恢复文本框的只读状态
+        self.device_info_text.config(state=tk.DISABLED)
+    
+    def on_device_change(self, event=None):
+        """当用户从下拉框中选择不同设备时调用
+        
+        Args:
+            event: 事件对象（可选）
+        """
+        # 获取当前选择的设备ID
+        device_id = self.selected_device.get()
+        
+        # 在设备列表中查找对应的设备信息
+        device_info = None
+        for device in self.devices:
+            if device['id'] == device_id:
+                device_info = device
+                break
+        
+        # 更新设备信息显示
+        self.update_device_info(device_info)
     
     def update_images(self, image):
         """更新图像显示，保持最新的两张截图
@@ -420,6 +512,25 @@ class AppUI:
         """
         return self.interval_var.get()
     
+    def get_input_text(self):
+        """获取当前输入的文本
+        
+        Returns:
+            str: 输入的文本内容
+        """
+        return self.input_text_var.get()
+    
+    def on_text_enter(self, event):
+        """当在文本输入框中按回车键时触发
+        
+        Args:
+            event: 键盘事件
+        """
+        # 清空输入框
+        self.input_text_var.set("")
+        # 返回 'break' 表示事件已处理
+        return 'break'
+    
     def get_tap_coordinates(self):
         """获取当前设置的点击坐标
         
@@ -427,6 +538,24 @@ class AppUI:
             tuple: (x, y) 坐标元组
         """
         return self.tap_x_var.get(), self.tap_y_var.get()
+    
+    def get_trigger_search(self):
+        """获取是否触发搜索
+        
+        Returns:
+            bool: 是否触发搜索
+        """
+        return self.trigger_search_var.get()
+    
+    def get_search_coords(self):
+        """获取搜索按钮坐标
+        
+        Returns:
+            tuple: (x, y) 坐标元组，如果未启用搜索则返回 None
+        """
+        if self.trigger_search_var.get():
+            return (self.search_x_var.get(), self.search_y_var.get())
+        return None
     
     def set_monitoring_state(self, is_monitoring):
         """设置监控状态，并相应地启用或禁用相关按钮
@@ -439,11 +568,13 @@ class AppUI:
             - 禁用开始按钮（防止重复启动）
             - 启用停止按钮
             - 禁用刷新按钮和设备选择框（防止在监控过程中切换设备）
+            - 禁用搜索设置
             
             当停止监控时：
             - 启用开始按钮
             - 禁用停止按钮
             - 启用刷新按钮和设备选择框
+            - 启用搜索设置
         """
         # 更新监控状态标志
         self.is_monitoring = is_monitoring
@@ -456,6 +587,9 @@ class AppUI:
             self.device_combobox.state(['disabled'])  # 禁用设备选择框
             self.interval_spinbox.state(['disabled'])  # 禁用间隔设置
             self.apply_interval_btn.state(['disabled'])  # 禁用应用按钮
+            self.trigger_search_checkbox.state(['disabled'])  # 禁用搜索勾选框
+            self.search_x_spinbox.state(['disabled'])  # 禁用搜索X坐标
+            self.search_y_spinbox.state(['disabled'])  # 禁用搜索Y坐标
         else:
             # 停止监控时的UI状态
             self.start_btn.state(['!disabled'])  # 启用开始按钮
@@ -464,3 +598,6 @@ class AppUI:
             self.device_combobox.state(['!disabled'])  # 启用设备选择框
             self.interval_spinbox.state(['!disabled'])  # 启用间隔设置
             self.apply_interval_btn.state(['!disabled'])  # 启用应用按钮
+            self.trigger_search_checkbox.state(['!disabled'])  # 启用搜索勾选框
+            self.search_x_spinbox.state(['!disabled'])  # 启用搜索X坐标
+            self.search_y_spinbox.state(['!disabled'])  # 启用搜索Y坐标

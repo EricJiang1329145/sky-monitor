@@ -179,7 +179,7 @@ def list_devices(adb_path=None):
         adb_path: ADB命令路径，如果为None则使用配置文件中的路径
     
     Returns:
-        list: 设备ID列表，每个元素是一个字符串格式的设备ID
+        list: 设备信息字典列表，每个元素包含设备详细信息
               如果获取失败或没有设备，返回空列表
     """
     # 如果没有指定ADB路径，使用配置文件中的路径
@@ -187,30 +187,66 @@ def list_devices(adb_path=None):
         adb_path = ADB_PATH
     
     try:
-        # 执行adb devices命令获取设备列表
+        # 执行adb devices -l命令获取详细设备列表
+        # -l 参数表示长格式，包含设备详细信息
         # capture_output=True表示捕获标准输出和错误输出
         # text=True表示以文本形式返回输出
         # timeout=5表示命令执行超时时间为5秒
-        result = subprocess.run([adb_path, "devices"], 
+        result = subprocess.run([adb_path, "devices", "-l"], 
                              capture_output=True, 
                              text=True, 
                              timeout=5)
         
         # 解析命令输出结果
-        # 输出格式：第一行是标题，后续每行是一个设备信息
+        # 输出格式：每行是一个设备信息，用空格分隔
         lines = result.stdout.strip().split('\n')
         devices = []
         
-        # 跳过第一行（标题行），从第二行开始处理
-        for line in lines[1:]:
+        for line in lines:
             line = line.strip()
             if line:
-                # 设备行格式："设备ID\t设备状态"
-                # 例如："12345678\tdevice"
-                parts = line.split('\t')
-                # 只添加状态为"device"的设备（表示设备已连接且可用）
-                if len(parts) == 2 and parts[1] == "device":
-                    devices.append(parts[0])
+                # 设备信息格式：用空格分隔的多个字段
+                # 例如："12345678 device usb:1-2 product:model transport_id:1"
+                parts = line.split()
+                
+                # 只处理状态为"device"的设备（表示设备已连接且可用）
+                if len(parts) >= 2 and parts[1] == "device":
+                    device_info = {
+                        'id': parts[0],  # 设备ID
+                        'status': parts[1],  # 设备状态
+                        'name': '',  # 设备名称（通过adb shell getprop获取）
+                        'model': '',  # 设备型号（通过adb shell getprop获取）
+                        'android_version': '',  # Android版本（通过adb shell getprop获取）
+                    }
+                    
+                    # 尝试获取设备名称
+                    try:
+                        name_result = subprocess.run([adb_path, "-s", parts[0], "shell", "getprop", "ro.product.model"],
+                                                  capture_output=True, text=True, timeout=3)
+                        if name_result.returncode == 0:
+                            device_info['name'] = name_result.stdout.strip()
+                    except:
+                        pass
+                    
+                    # 尝试获取设备型号
+                    try:
+                        model_result = subprocess.run([adb_path, "-s", parts[0], "shell", "getprop", "ro.product.device"],
+                                                  capture_output=True, text=True, timeout=3)
+                        if model_result.returncode == 0:
+                            device_info['model'] = model_result.stdout.strip()
+                    except:
+                        pass
+                    
+                    # 尝试获取Android版本
+                    try:
+                        version_result = subprocess.run([adb_path, "-s", parts[0], "shell", "getprop", "ro.build.version.release"],
+                                                  capture_output=True, text=True, timeout=3)
+                        if version_result.returncode == 0:
+                            device_info['android_version'] = version_result.stdout.strip()
+                    except:
+                        pass
+                    
+                    devices.append(device_info)
         
         return devices
     except Exception as e:
@@ -264,6 +300,96 @@ def tap(x, y, device_id=None, adb_path=None):
     except Exception as e:
         # 如果点击过程中出现异常，打印错误信息并返回False
         print(f"点击失败: {e}")
+        return False
+
+
+def input_text(text, device_id=None, adb_path=None):
+    """在安卓设备上输入文本（使用ADBKeyboard）
+    
+    Args:
+        text: 要输入的文本内容
+        device_id: 要操作的设备ID，如果为None则使用默认设备
+        adb_path: ADB命令路径，如果为None则使用配置文件中的路径
+    
+    Returns:
+        bool: 输入操作是否成功
+    """
+    # 如果没有指定ADB路径，使用配置文件中的路径
+    if adb_path is None:
+        adb_path = ADB_PATH
+    
+    try:
+        # 构建ADB命令
+        cmd = [adb_path]
+        
+        # 如果指定了设备ID，添加 -s 参数指定设备
+        if device_id:
+            cmd.extend(["-s", device_id])
+        
+        # 检查当前输入法是否为 ADBKeyboard
+        check_cmd = cmd.copy()
+        check_cmd.extend(["shell", "settings", "get", "secure", "default_input_method"])
+        
+        check_result = subprocess.run(check_cmd,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,
+                                     timeout=5)
+        
+        current_ime = check_result.stdout.decode('utf-8', errors='ignore').strip()
+        adbkeyboard_ime = "com.android.adbkeyboard/.AdbIME"
+        
+        # 保存原来的输入法
+        original_ime = current_ime
+        
+        # 如果当前输入法不是 ADBKeyboard，切换到 ADBKeyboard
+        if current_ime != adbkeyboard_ime:
+            switch_cmd = cmd.copy()
+            switch_cmd.extend(["shell", "ime", "set", adbkeyboard_ime])
+            
+            switch_result = subprocess.run(switch_cmd,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         timeout=5)
+            
+            if switch_result.returncode != 0:
+                raise Exception(f"切换输入法失败: {switch_result.stderr.decode('utf-8', errors='ignore')}")
+        
+        # 使用ADBKeyboard的broadcast命令输入文本
+        # 注意：需要先点击到输入框，让输入框获得焦点
+        input_cmd = cmd.copy()
+        input_cmd.extend(["shell", "am", "broadcast", "-a", "ADB_INPUT_BROADCAST", "--es", f"msg '{text}'"])
+        
+        # 执行命令
+        result = subprocess.run(input_cmd, 
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             timeout=5)
+        
+        # 检查命令执行是否成功
+        if result.returncode != 0:
+            error_msg = result.stderr.decode('utf-8', errors='ignore')
+            raise Exception(f"输入文本失败 (返回码 {result.returncode}): {error_msg}")
+        
+        # 如果原来不是 ADBKeyboard，切换回原来的输入法
+        if original_ime != adbkeyboard_ime:
+            restore_cmd = cmd.copy()
+            restore_cmd.extend(["shell", "ime", "set", original_ime])
+            
+            restore_result = subprocess.run(restore_cmd,
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE,
+                                           timeout=5)
+            
+            if restore_result.returncode != 0:
+                print(f"警告：切换回原输入法失败: {restore_result.stderr.decode('utf-8', errors='ignore')}")
+        
+        return True
+    except subprocess.TimeoutExpired:
+        print("错误：命令执行超时")
+        return False
+    except Exception as e:
+        # 如果输入过程中出现异常，打印错误信息并返回False
+        print(f"输入文本失败: {e}")
         return False
 
 

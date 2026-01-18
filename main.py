@@ -56,6 +56,12 @@ class SkyMonitorApp:
         
         # 点击按钮：点击时执行模拟点击操作
         self.ui.tap_btn.configure(command=self.perform_tap)
+        
+        # 发送文本按钮：点击时执行发送文本操作
+        self.ui.send_text_btn.configure(command=self.send_text)
+        
+        # 设备选择下拉框：选择变化时更新设备信息显示
+        self.ui.device_combobox.bind('<<ComboboxSelected>>', self.ui.on_device_change)
     
     def refresh_devices(self):
         """刷新连接的安卓设备列表"""
@@ -152,6 +158,39 @@ class SkyMonitorApp:
             self.ui.log_message([
                 ("点击失败，坐标：", "error"),
                 (f" ({x}, {y})", "path")
+            ])
+    
+    def send_text(self):
+        """执行发送文本操作"""
+        # 获取当前选中的设备
+        device_id = self.ui.selected_device.get()
+        if not device_id:
+            self.ui.log_message("请先选择设备", "warning")
+            return
+        
+        # 获取输入的文本
+        text = self.ui.get_input_text()
+        if not text:
+            self.ui.log_message("请输入要发送的文本", "warning")
+            return
+        
+        # 获取是否触发搜索的设置
+        trigger_search = self.ui.get_trigger_search()
+        
+        # 执行文本输入操作
+        # 默认使用 ADBKeyboard 方法，自动发送回车
+        # 当勾选"触发搜索"时，不传递 tap_coords，让程序发送回车键来触发搜索
+        success = self.adb_manager.input_text(text, device_id, method='adbkeyboard', send_enter=True, tap_coords=None)
+        
+        if success:
+            self.ui.log_message([
+                ("文本发送成功：", "success"),
+                (f" {text}", "path")
+            ])
+        else:
+            self.ui.log_message([
+                ("文本发送失败：", "error"),
+                (f" {text}", "path")
             ])
     
     
